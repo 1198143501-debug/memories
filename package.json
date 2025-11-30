@@ -15,7 +15,6 @@
     "@supabase/supabase-js": "^2.84.0",
     "gsap": "^3.13.0",
     "idb": "^8.0.3",
-    "lz-string": "^1.5.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.24",
     "vue-router": "^4.6.3"
