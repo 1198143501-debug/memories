@@ -1,0 +1,9 @@
+{
+  "name": "my-supabase-site",
+  "version": "1.0.0",
+  "description": "Static site with Supabase",
+  "scripts": {
+    "build": "echo 'No build needed for static site.'"
+  },
+  "private": true
+}
