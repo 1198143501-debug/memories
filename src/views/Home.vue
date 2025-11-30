@@ -2,7 +2,7 @@
   <section class="home">
     <header class="hero">
       <div>
-        <h1>旧时光快乐流</h1>
+      
         <p>把旧物与光影里的快乐瞬间收集在此，与在乎的人共享那份温度。</p>
       </div>
       <div class="sort">

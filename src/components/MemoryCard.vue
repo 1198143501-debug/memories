@@ -1,6 +1,7 @@
 <template>
 <article
   class="memory-card"
+  :class="{ 'is-loading': isLoading }"
   @mouseenter="hovering = true"
   @mouseleave="hovering = false"
   @click="goDetail"
@@ -23,14 +24,21 @@
       <p class="year">{{ memory.year }} · {{ new Date(memory.createdAt).toLocaleDateString() }}</p>
       <p class="story">{{ memory.story }}</p>
       <div class="actions">
-        <button class="like" :class="{ active: liked }" @click.stop="handleLike">
-          {{ liked ? '❤️ 已喜欢' : '🤍 喜欢' }} · {{ memory.likes }}
+        <button class="like" :class="{ active: liked, 'is-loading': likeLoading }" @click.stop="handleLike" :disabled="likeLoading">
+          <span v-if="likeLoading" class="action-spinner"></span>
+          <span v-else>{{ liked ? '❤️ 已喜欢' : '🤍 喜欢' }} · {{ memory.likes }}</span>
         </button>
         <RouterLink class="share" :to="{ name: 'detail', params: { id: memory.id } }">
           查看
         </RouterLink>
-        <button class="danger" @click.stop="handleDelete">删除</button>
+        <button class="danger" @click.stop="handleDelete" :disabled="deleteLoading">
+          <span v-if="deleteLoading" class="action-spinner"></span>
+          <span v-else>删除</span>
+        </button>
       </div>
+    </div>
+    <div v-if="errorMessage" class="error-message">
+      {{ errorMessage }}
     </div>
   </article>
 </template>
@@ -49,19 +57,51 @@ const props = defineProps({
 const hovering = ref(false);
 const store = useMemoryStore();
 const liked = computed(() => store.isLiked(props.memory.id));
+const likeLoading = ref(false);
+const deleteLoading = ref(false);
+const errorMessage = ref('');
+const isLoading = ref(false);
 
 const goDetail = () => {
   window.location.hash = `#/detail/${props.memory.id}`;
 };
 
 const handleLike = async () => {
-  await store.likeMemory(props.memory.id);
+  if (likeLoading.value) return;
+  
+  try {
+    likeLoading.value = true;
+    errorMessage.value = '';
+    await store.likeMemory(props.memory.id);
+  } catch (error) {
+    errorMessage.value = '点赞失败，请重试';
+    console.error('Like failed:', error);
+    setTimeout(() => {
+      errorMessage.value = '';
+    }, 3000);
+  } finally {
+    likeLoading.value = false;
+  }
 };
 
 const handleDelete = async () => {
+  if (deleteLoading.value) return;
+  
   const confirmed = window.confirm('确定删除这段时光吗？操作不可撤销。');
   if (!confirmed) return;
-  await store.deleteMemory(props.memory.id);
+  
+  try {
+    deleteLoading.value = true;
+    errorMessage.value = '';
+    await store.deleteMemory(props.memory.id);
+  } catch (error) {
+    errorMessage.value = '删除失败，请重试';
+    console.error('Delete failed:', error);
+    deleteLoading.value = false;
+    setTimeout(() => {
+      errorMessage.value = '';
+    }, 3000);
+  }
 };
 </script>
 
@@ -79,11 +119,17 @@ const handleDelete = async () => {
   height: clamp(360px, 78vw, 520px);
   transform: translateY(0);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
 }
 
 .memory-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 20px 45px rgba(75, 63, 53, 0.25);
+}
+
+.memory-card.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .media {
@@ -173,6 +219,49 @@ h3 {
   background: rgba(0, 0, 0, 0.05);
   color: #a33f3f;
   box-shadow: none;
+}
+
+.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.like:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+.error-message {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(244, 67, 54, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  z-index: 10;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 640px) {

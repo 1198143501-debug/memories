@@ -22,8 +22,13 @@
           <video v-else :src="previewUrl" controls />
         </div>
 
-        <button type="submit" :disabled="!canSubmit || store.loading">
-          {{ store.loading ? '正在珍藏...' : '保存到本地' }}
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
+
+        <button type="submit" :disabled="!canSubmit || store.loading || isSubmitting">
+          <span v-if="isSubmitting" class="submit-spinner"></span>
+          <span v-else>{{ store.loading ? '正在上传...' : '保存回忆' }}</span>
         </button>
       </form>
 
@@ -43,6 +48,8 @@ const year = ref(new Date().getFullYear());
 const story = ref('');
 const selectedFile = ref(null);
 const previewUrl = ref('');
+const errorMessage = ref('');
+const isSubmitting = ref(false);
 
 const isImage = computed(() => selectedFile.value?.type.startsWith('image'));
 
@@ -62,19 +69,35 @@ const canSubmit = computed(
 
 const handleFile = (file) => {
   selectedFile.value = file;
+  errorMessage.value = '';
 };
 
 const handleSubmit = async () => {
-  if (!canSubmit.value) return;
-  const result = await store.addMemory({
-    file: selectedFile.value,
-    title: title.value,
-    year: Number(year.value),
-    story: story.value,
-  });
-  title.value = '';
-  story.value = '';
-  selectedFile.value = null;
+  if (!canSubmit.value || isSubmitting.value) return;
+  
+  try {
+    isSubmitting.value = true;
+    errorMessage.value = '';
+    
+    const result = await store.addMemory({
+      file: selectedFile.value,
+      title: title.value,
+      year: Number(year.value),
+      story: story.value,
+    });
+    
+    if (result) {
+      title.value = '';
+      story.value = '';
+      selectedFile.value = null;
+      previewUrl.value = '';
+    }
+  } catch (error) {
+    errorMessage.value = '保存回忆失败，请重试';
+    console.error('Upload failed:', error);
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>
 
@@ -136,6 +159,31 @@ textarea {
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.error-message {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  border: 1px solid rgba(244, 67, 54, 0.2);
+}
+
+.submit-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 </style>
